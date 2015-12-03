@@ -19,7 +19,7 @@
 
 </head>
 
-<body><center>
+<body onload="loadgrid(); updatebuttontwostatus();"><center>
   <br><br>
 
   <table>
@@ -225,7 +225,7 @@
     <div class="popup">
       <div style="font-family:Georgia; color:white; text-align:center; font-size:250%">Sudoku Solver</div>
       <a class="close" href="#">&times;</a>
-      <p style="font-family:Georgia; font-size:150%; color:white; text-align:center;">Click a cell to insert a number.<br><br>Click it again and choose &ldquo;C&rdquo; to clear it.<br><br>When you&rsquo;re ready click &ldquo;Solve&rdquo;.</p>
+      <p style="font-family:Georgia; font-size:150%; color:white; text-align:center;">Click a cell to insert a number.<br><br>Click it again and use the blank button (or type zero) to clear it.<br><br>When you&rsquo;re ready click &ldquo;Solve&rdquo;.</p>
     </div>
   </div>
 
@@ -255,7 +255,7 @@
 <script type="text/javascript">
 
 var cellvalue = []; for(i=0; i<100; i++){cellvalue[i]="";}
-var currentcell=0;
+var currentcell=11;
 var examplemode=1;
 var notempty=0;
 
@@ -269,14 +269,28 @@ var possiblecount=0;
 
 var bottomleft=0;
 
+var initialgrid=window.location.search.substring(1);
+var gridcode=[];
+
+var skipunusedcells=0;
+
+document.body.onkeydown = function(e){
+	if(e.keyCode>47 && e.keyCode<58){
+    numberpicked(e.keyCode-48);
+    currentcell++;
+    if(currentcell>99){currentcell=11;}
+    if(currentcell%10==0){currentcell++;}
+  }
+}
+
 function cellclicked(cellcoords){
 
   closemenu();
 
-  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
+  updategridvisual();
 
   if(cellvalue[cellcoords]==""){document.getElementById(cellcoords).innerHTML="<span style=\"color:black;\">?</span>";}
-  else{document.getElementById("M"+cellvalue[cellcoords]).innerHTML="C";}
+  else{document.getElementById("M"+cellvalue[cellcoords]).innerHTML="";}
   document.getElementById("picknumber").style.visibility="visible";
   document.getElementById("picknumber").style.left=(event.clientX+10)+"px";
   document.getElementById("picknumber").style.top=(event.clientY+10)+"px";
@@ -287,7 +301,9 @@ function cellclicked(cellcoords){
 function numberpicked(pick){
   if(cellvalue[currentcell]==pick){cellvalue[currentcell]="";}
   else{cellvalue[currentcell]=pick;}
-  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
+  clearsolveprogress();
+  updategridvisual();
+//  genereategridcode();
   updatebuttontwostatus();
   closemenu();
 }
@@ -304,35 +320,45 @@ function buttontwo(){
 }
 
 function example(){
-  cellvalue[13]=1;
-  cellvalue[23]=2;
-  cellvalue[33]="";
-  cellvalue[43]=4;
-  cellvalue[53]=5;
-  cellvalue[63]="";
-  cellvalue[73]=7;
-  cellvalue[83]=8;
-  cellvalue[93]=9;
-  cellvalue[31]=1;
-  cellvalue[32]=2;
-  cellvalue[33]="";
-  cellvalue[34]=4;
-  cellvalue[35]=5;
-  cellvalue[36]=6;
-  cellvalue[37]=7;
-  cellvalue[38]=8;
-  cellvalue[39]=9;
-  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
+  cellvalue[19]=8;
+  cellvalue[21]=9;
+  cellvalue[26]=5;
+  cellvalue[27]=7;
+  cellvalue[32]=8;
+  cellvalue[33]=1;
+  cellvalue[38]=3;
+  cellvalue[42]=5;
+  cellvalue[44]=1;
+  cellvalue[48]=6;
+  cellvalue[55]=4;
+  cellvalue[57]=9;
+  cellvalue[65]=5;
+  cellvalue[66]=7;
+  cellvalue[71]=4;
+  cellvalue[75]=7;
+  cellvalue[77]=2;
+  cellvalue[82]=1;
+  cellvalue[83]=6;
+  cellvalue[84]=3;
+  cellvalue[93]=8;
+  updategridvisual();
   updatebuttontwostatus();
 }
 
 function cleargrid(){
-  for(i=0; i<100; i++){
-    cellvalue[i]="";
-    if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}
-    for(var j=0; j<10; j++){possibles[i][j]=1;}
-  }
+  for(i=0; i<100; i++){cellvalue[i]="";}
+  currentcell=11;
+  clearsolveprogress();
+  updategridvisual();
   updatebuttontwostatus();
+}
+
+function clearsolveprogress(){
+  for(i=0; i<100; i++){for(var j=0; j<10; j++){possibles[i][j]=1;}}
+}
+
+function updategridvisual(){
+  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
 }
 
 function updatebuttontwostatus(){
@@ -343,12 +369,28 @@ function updatebuttontwostatus(){
 
 function solve(){
   progressmade=0;
+  removepossiblefromknowns();
   eliminateinrow();
   eliminateincolumn();
   eliminateinbox();
+  aloneincolumn();
+  aloneinrow();
+  aloneinbox();
   checkforknown();
-  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
+  updategridvisual();
   if(progressmade){solve();}
+}
+
+function removepossiblefromknowns(){
+  for(var i=11; i<100; i++){
+    if(cellvalue[i]!=""){
+      for(var j=1; j<10; j++){
+        if(possibles[i][j]==1  && j!=cellvalue[i]){
+          possibles[i][j]=0; progressmade=1;
+        }
+      }
+    }
+  }
 }
 
 function checkforknown(){
@@ -368,7 +410,7 @@ function eliminateinrow(){
   for(var i=11; i<100; i++){
     if(cellvalue[i]!=""){
       for(j=(i%10)+10; j<100; j+=10){
-        if(possibles[j][cellvalue[i]]==1){
+        if(possibles[j][cellvalue[i]]==1 && j!=i){
           possibles[j][cellvalue[i]]=0; progressmade=1;
         }
       }
@@ -380,7 +422,7 @@ function eliminateincolumn(){
   for(var i=11; i<100; i++){
     if(cellvalue[i]!=""){
       for(j=10*Math.floor(i/10)+1; j<10*(Math.floor(i/10)+1); j++){
-        if(possibles[j][cellvalue[i]]==1){
+        if(possibles[j][cellvalue[i]]==1  && j!=i){
           possibles[j][cellvalue[i]]=0; progressmade=1;
         }
       }
@@ -392,18 +434,86 @@ function eliminateinbox(){
   for(var i=11; i<100; i++){
     if(cellvalue[i]!=""){
       bottomleft=((30*Math.floor((i-10)/30))+10)+((3*Math.floor(((i%10)-1)/3))+1);
-      if(possibles[bottomleft][cellvalue[i]]==1){possibles[bottomleft][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+1][cellvalue[i]]==1){possibles[bottomleft+1][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+2][cellvalue[i]]==1){possibles[bottomleft+2][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+10][cellvalue[i]]==1){possibles[bottomleft+10][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+11][cellvalue[i]]==1){possibles[bottomleft+11][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+12][cellvalue[i]]==1){possibles[bottomleft+12][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+20][cellvalue[i]]==1){possibles[bottomleft+20][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+21][cellvalue[i]]==1){possibles[bottomleft+21][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+22][cellvalue[i]]==1){possibles[bottomleft+22][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft][cellvalue[i]]==1 && bottomleft!=i){possibles[bottomleft][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+1][cellvalue[i]]==1 && bottomleft+1!=i){possibles[bottomleft+1][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+2][cellvalue[i]]==1 && bottomleft+2!=i){possibles[bottomleft+2][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+10][cellvalue[i]]==1 && bottomleft+10!=i){possibles[bottomleft+10][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+11][cellvalue[i]]==1 && bottomleft+11!=i){possibles[bottomleft+11][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+12][cellvalue[i]]==1 && bottomleft+12!=i){possibles[bottomleft+12][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+20][cellvalue[i]]==1 && bottomleft+20!=i){possibles[bottomleft+20][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+21][cellvalue[i]]==1 && bottomleft+21!=i){possibles[bottomleft+21][cellvalue[i]]=0; progressmade=1;}
+      if(possibles[bottomleft+22][cellvalue[i]]==1 && bottomleft+22!=i){possibles[bottomleft+22][cellvalue[i]]=0; progressmade=1;}
     }
   }
 }
 
+function aloneincolumn(){
+  for(var i=1; i<10; i++){
+    for(var j=1; j<10; j++){
+      lonepossible=0;
+      possiblecount=0;
+      for(var k=1; k<10; k++){
+        if(possibles[10*j+k][i]==1){lonepossible=10*j+k; possiblecount++;}
+      }
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+    }
+  }
+}
+
+function aloneinrow(){
+  for(var i=1; i<10; i++){
+    for(var j=1; j<10; j++){
+      lonepossible=0;
+      possiblecount=0;
+      for(var k=1; k<10; k++){
+        if(possibles[j+10*k][i]==1){lonepossible=j+10*k; possiblecount++;}
+      }
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+    }
+  }
+}
+
+function aloneinbox(){
+  for(var i=1; i<10; i++){
+    for(var j=1; j<10; j++){
+      lonepossible=0;
+      possiblecount=0;
+      bottomleft=(30*Math.floor((j+2)/3))-20 + (3*((j+2)%3))+1;
+      if(possibles[bottomleft][i]==1){lonepossible=bottomleft; possiblecount++;}
+      if(possibles[bottomleft+1][i]==1){lonepossible=bottomleft+1; possiblecount++;}
+      if(possibles[bottomleft+2][i]==1){lonepossible=bottomleft+2; possiblecount++;}
+      if(possibles[bottomleft+10][i]==1){lonepossible=bottomleft+10; possiblecount++;}
+      if(possibles[bottomleft+11][i]==1){lonepossible=bottomleft+11; possiblecount++;}
+      if(possibles[bottomleft+12][i]==1){lonepossible=bottomleft+12; possiblecount++;}
+      if(possibles[bottomleft+20][i]==1){lonepossible=bottomleft+20; possiblecount++;}
+      if(possibles[bottomleft+21][i]==1){lonepossible=bottomleft+21; possiblecount++;}
+      if(possibles[bottomleft+22][i]==1){lonepossible=bottomleft+22; possiblecount++;}
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+    }
+  }
+}
+
+function loadgrid(){
+  if(initialgrid.length==81){
+    for(k=1; k<82; k++){
+      if(initialgrid.charAt(k-1)!=0){cellvalue[currentcell]=(initialgrid.charAt(k-1));}
+      currentcell++;
+      if(currentcell%10==0){currentcell++;}
+    }
+    updategridvisual();
+  }
+  currentcell=11;
+}
+
+function genereategridcode(){
+  skipunusedcells=11;
+  for(i=0; i<81; i++){
+    if(skipunusedcells%10==0){skipunusedcells++;}
+    gridcode[i]=cellvalue[skipunusedcells];
+    if(gridcode[i]==""){gridcode[i]="0";}
+    skipunusedcells++;
+  }
+  window.location.href = "?"+gridcode.join("");
+}
 
 </script>
