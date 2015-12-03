@@ -207,8 +207,8 @@
     <tr>
 
       <td style="text-align:left;">
-        <button onclick="solve()" class="solvebutton">Solve</button>&nbsp;
-        <button onclick="buttontwo()" id="buttontwotext" class="buttontwo">Example</button>
+        <button onclick="stop=0; solve()" id="solvebuttontext" class="solvebutton">Solve</button>&nbsp;
+        <button onclick="buttontwo();" id="buttontwotext" class="buttontwo">Example</button>
       </td>
 
       <td style="text-align:right;">
@@ -274,6 +274,24 @@ var gridcode=[];
 
 var skipunusedcells=0;
 
+var trialscount=0;
+var totaltrialscount=0;
+
+var stop=0;
+
+var currenttrial = {cell:11, testvalue:0, depth:0};
+var failedtrial = {cell:0, testvalue:0, depth:0};
+
+var pretrialsprogress = [];
+
+var currenttrialvalue=0;
+
+var triedthese = []; for(i=0; i<81; i++){triedthese[i]=0;}
+
+
+var consistent=1;
+var consistencycount=0;
+
 document.body.onkeydown = function(e){
 	if(e.keyCode>47 && e.keyCode<58){
     numberpicked(e.keyCode-48);
@@ -299,7 +317,7 @@ function cellclicked(cellcoords){
 }
 
 function numberpicked(pick){
-  if(cellvalue[currentcell]==pick){cellvalue[currentcell]="";}
+  if(cellvalue[currentcell]==pick || pick==0){cellvalue[currentcell]="";}
   else{cellvalue[currentcell]=pick;}
   clearsolveprogress();
   updategridvisual();
@@ -315,32 +333,37 @@ function closemenu(){
 
 function buttontwo(){
   closemenu();
+  document.getElementById("solvebuttontext").innerHTML="Solve";
   if(examplemode){example();}
   else{cleargrid();}
 }
 
 function example(){
-  cellvalue[19]=8;
-  cellvalue[21]=9;
-  cellvalue[26]=5;
-  cellvalue[27]=7;
-  cellvalue[32]=8;
-  cellvalue[33]=1;
-  cellvalue[38]=3;
-  cellvalue[42]=5;
-  cellvalue[44]=1;
-  cellvalue[48]=6;
-  cellvalue[55]=4;
-  cellvalue[57]=9;
-  cellvalue[65]=5;
-  cellvalue[66]=7;
-  cellvalue[71]=4;
-  cellvalue[75]=7;
-  cellvalue[77]=2;
-  cellvalue[82]=1;
-  cellvalue[83]=6;
-  cellvalue[84]=3;
-  cellvalue[93]=8;
+  cellvalue[13]=2;
+  cellvalue[15]=1;
+  cellvalue[17]=7;
+  cellvalue[25]=3;
+  cellvalue[26]=9;
+  cellvalue[27]=5;
+  cellvalue[31]=5;
+  cellvalue[32]=4;
+  cellvalue[39]=6;
+  cellvalue[42]=3;
+  cellvalue[51]=2;
+  cellvalue[52]=7;
+  cellvalue[55]=6;
+  cellvalue[58]=1;
+  cellvalue[59]=3;
+  cellvalue[68]=8;
+  cellvalue[71]=1;
+  cellvalue[78]=9;
+  cellvalue[79]=2;
+  cellvalue[83]=8;
+  cellvalue[84]=9;
+  cellvalue[85]=2;
+  cellvalue[93]=4;
+  cellvalue[95]=5;
+  cellvalue[97]=8;
   updategridvisual();
   updatebuttontwostatus();
 }
@@ -348,6 +371,20 @@ function example(){
 function cleargrid(){
   for(i=0; i<100; i++){cellvalue[i]="";}
   currentcell=11;
+  progressmade=0;
+  lonepossible=0;
+  possiblecount=0;
+  bottomleft=0;
+  skipunusedcells=0;
+  trialscount=0;
+  totaltrialscount=0;
+  stop=0;
+  currenttrial = {cell:11, testvalue:0, depth:0};
+  failedtrial = {cell:0, testvalue:0, depth:0};
+  currenttrialvalue=0;
+  for(i=0; i<81; i++){triedthese[i]=0; pretrialsprogress[i]="";}
+  consistent=1;
+  consistencycount=0;
   clearsolveprogress();
   updategridvisual();
   updatebuttontwostatus();
@@ -355,6 +392,7 @@ function cleargrid(){
 
 function clearsolveprogress(){
   for(i=0; i<100; i++){for(var j=0; j<10; j++){possibles[i][j]=1;}}
+  trialscount=0;
 }
 
 function updategridvisual(){
@@ -368,17 +406,63 @@ function updatebuttontwostatus(){
 }
 
 function solve(){
-  progressmade=0;
-  removepossiblefromknowns();
-  eliminateinrow();
-  eliminateincolumn();
-  eliminateinbox();
-  aloneincolumn();
-  aloneinrow();
-  aloneinbox();
-  checkforknown();
-  updategridvisual();
-  if(progressmade){solve();}
+  if(!stop){
+    progressmade=0;
+    removepossiblefromknowns();
+    eliminateinrow();
+    eliminateincolumn();
+    eliminateinbox();
+    aloneincolumn();
+    aloneinrow();
+    aloneinbox();
+    checkforknown();
+    checkgridconsistency();
+    if(!consistent){badtrial();}
+    else{
+      updategridvisual();
+      updatebuttontwostatus();
+      checkifcomplete();
+      if(progressmade){solve();}
+      else{trial();}
+    }
+  }
+}
+
+function trial(){
+  if(trialscount==0){for(i=11; i<100; i++){pretrialsprogress[i]=cellvalue[i];}}
+  for(i=11; i<100; i++){
+    if(cellvalue[i]=="" && i%10!=0){
+      for(j=1; j<10; j++){
+        if(possibles[i][j]==1 && j>triedthese[trialscount+1]){
+          cellvalue[i]=j;
+          trialscount++;
+          totaltrialscount++;
+          progressmade=1;
+          currenttrialvalue=j;
+          j=10;
+        }
+      }
+      i=100;
+    }
+  }
+  if(progressmade==0){badtrial();}
+  else{solve();}
+}
+
+function badtrial(){
+  triedthese[trialscount]=currenttrialvalue;
+  for(i=trialscount+1; i<81; i++){triedthese[i]=0;}
+  for(i=11; i<100; i++){cellvalue[i]=pretrialsprogress[i];}
+  clearsolveprogress();
+  solve();
+}
+
+function checkifcomplete(){
+  knowncount=0;
+  for(i=11; i<100; i++){
+    if(cellvalue[i]!=""){knowncount++;}
+  }
+  if(knowncount==81){progressmade=1; stop=1; document.getElementById("solvebuttontext").innerHTML="Done";}
 }
 
 function removepossiblefromknowns(){
@@ -395,13 +479,13 @@ function removepossiblefromknowns(){
 
 function checkforknown(){
   for(var i=11; i<100; i++){
-    if(cellvalue[i]==""){
+    if(cellvalue[i]=="" && i%10!=0){
       lonepossible=0;
       possiblecount=0;
       for(var j=1; j<10; j++){
         if(possibles[i][j]==1){lonepossible=j; possiblecount++;}
       }
-      if(possiblecount==1){cellvalue[i]=lonepossible; progressmade=1;}
+      if(possiblecount==1){cellvalue[i]=lonepossible; progressmade=1; i=100;}
     }
   }
 }
@@ -455,7 +539,7 @@ function aloneincolumn(){
       for(var k=1; k<10; k++){
         if(possibles[10*j+k][i]==1){lonepossible=10*j+k; possiblecount++;}
       }
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
     }
   }
 }
@@ -468,7 +552,7 @@ function aloneinrow(){
       for(var k=1; k<10; k++){
         if(possibles[j+10*k][i]==1){lonepossible=j+10*k; possiblecount++;}
       }
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
     }
   }
 }
@@ -488,7 +572,24 @@ function aloneinbox(){
       if(possibles[bottomleft+20][i]==1){lonepossible=bottomleft+20; possiblecount++;}
       if(possibles[bottomleft+21][i]==1){lonepossible=bottomleft+21; possiblecount++;}
       if(possibles[bottomleft+22][i]==1){lonepossible=bottomleft+22; possiblecount++;}
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1;}
+      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
+    }
+  }
+}
+
+function checkgridconsistency(){
+  for(i=1; i<10; i++){
+    for(j=1; j<10; j++){
+      consistencycount=0;
+      for(k=1; k<10; k++){
+        if(cellvalue[10*j+k]==i){consistencycount++;}
+      }
+      if(consistencycount>1){consistent=0;}
+      consistencycount=0;
+      for(k=1; k<10; k++){
+        if(cellvalue[j+k*10]==i){consistencycount++;}
+      }
+      if(consistencycount>1){consistent=0;}
     }
   }
 }
