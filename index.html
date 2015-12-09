@@ -308,12 +308,14 @@ var knowncount=0;
 var solved=0;
 var guesses=0;
 var totalguesses=0;
-var guessesperattempt=100;
-var maxguesses=1000;
+var guessesperattempt=81;
+var maxguesses=10000;
 var possiblevaluescount=0;
 var lowestpossiblevaluescount=10;
-var randomstart;
+var randomstart=0;
 var gridrecord=[100];
+var modifier=0;
+var modified=0;
 
 function loadgrid(){
   if(initialgrid.length==81){
@@ -487,20 +489,24 @@ function guessvalue(){
     if(possiblevaluescount==2){lowestpossiblevaluescount=2; i=100;}
     else if(possiblevaluescount<lowestpossiblevaluescount && possiblevaluescount>2){lowestpossiblevaluescount=possiblevaluescount;}
   }
-  for(i=11; i<100; i++){if(i%10!=0){
-    possiblevaluescount=0;
-    for(j=1; j<10; j++){
-      if(possibles[i][j]==1){possiblevaluescount++;}
-    }
-    if(possiblevaluescount==lowestpossiblevaluescount){
-      randomstart=Math.floor(9*Math.random())+1;
-      while(cellvalue[i]==""){
-        if(possibles[i][randomstart]==1){cellvalue[i]=randomstart; for(j=1; j<10; j++){if(j!=randomstart){possibles[i][j]=0;}}}
-        else{randomstart=(randomstart%9)+1;}
+  modifier=Math.floor(90*Math.random());
+  for(i=11; i<100; i++){
+    modified=((i+modifier)%89)+11;
+    if(modified%10!=0){
+      possiblevaluescount=0;
+      for(j=1; j<10; j++){
+        if(possibles[modified][j]==1){possiblevaluescount++;}
       }
-      i=100;
+      if(possiblevaluescount==lowestpossiblevaluescount){
+        randomstart=Math.floor(9*Math.random())+1;
+        while(cellvalue[modified]==""){
+          if(possibles[modified][randomstart]==1){cellvalue[modified]=randomstart; for(j=1; j<10; j++){if(j!=randomstart){possibles[modified][j]=0;}}}
+          else{randomstart=(randomstart%9)+1;}
+        }
+        i=100;
+      }
     }
-  }}
+  }
   solve();
 }
 
