@@ -17,9 +17,9 @@ table {border-collapse:collapse; border-spacing:0;}
 
 .pickingcellcontent {width:30px; height:30px; background-color:white; padding:0; border-radius:8px; border:3px solid black; text-align:center; font-size:28px; color:black;}
 
-.solvebutton {vertical-align:middle; width:118px; height:50px; border-radius:10px; font-family:Liberation Serif, Tahoma, Arial, Helvetica, Sans-Serif; font-size: 35px; background-color:white;}
+.solvebutton {vertical-align:middle; width:148px; height:50px; border-radius:10px; font-family:Liberation Serif, Tahoma, Arial, Helvetica, Sans-Serif; font-size: 35px; background-color:white;}
 
-.buttontwo {vertical-align:middle; width:160px; height:50px; border-radius:10px; font-family:Liberation Serif, Tahoma, Arial, Helvetica, Sans-Serif; font-size: 35px; background-color:white;}
+.buttontwo {vertical-align:middle; width:130px; height:50px; border-radius:10px; font-family:Liberation Serif, Tahoma, Arial, Helvetica, Sans-Serif; font-size: 35px; background-color:white;}
 
 .icons {}
 

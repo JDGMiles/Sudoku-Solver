@@ -19,7 +19,7 @@
 
 </head>
 
-<body onload="loadgrid(); updatebuttontwostatus();"><center>
+<body onload="loadgrid();"><center>
   <br><br>
 
   <table>
@@ -207,8 +207,8 @@
     <tr>
 
       <td style="text-align:left;">
-        <button onclick="stop=0; solve()" id="solvebuttontext" class="solvebutton">Solve</button>&nbsp;
-        <button onclick="buttontwo();" id="buttontwotext" class="buttontwo">Example</button>
+        <button onclick="solve()" id="solvebuttontext" class="solvebutton">Solve</button>&nbsp;
+        <button onclick="buttontwo();" id="buttontwotext" class="buttontwo">Demo</button>
       </td>
 
       <td style="text-align:right;">
@@ -259,38 +259,34 @@ var currentcell=11;
 var examplemode=1;
 var notempty=0;
 
-var possibles = new Array(100)
-for(var i=0; i< 100; i++){possibles[i] = new Array(10); for(var j=0; j<10; j++){possibles[i][j]=1;}}
-
-var progressmade=0;
-
-var lonepossible=0;
-var possiblecount=0;
+var possibles = new Array(100); for(var i=0; i< 100; i++){possibles[i] = new Array(10); for(var j=0; j<10; j++){possibles[i][j]=1;}}
 
 var bottomleft=0;
+
+var boxcoords = new Array(11);
+
+for(var i=1; i<10; i++){
+  boxcoords[i] = new Array(11);
+  bottomleft=(30*Math.floor((i+2)/3))-20 + (3*((i+2)%3))+1;
+  boxcoords[i][1] = bottomleft;
+  boxcoords[i][2] = bottomleft+1;
+  boxcoords[i][3] = bottomleft+2;
+  boxcoords[i][4] = bottomleft+10;
+  boxcoords[i][5] = bottomleft+11;
+  boxcoords[i][6] = bottomleft+12;
+  boxcoords[i][7] = bottomleft+20;
+  boxcoords[i][8] = bottomleft+21;
+  boxcoords[i][9] = bottomleft+22;
+}
 
 var initialgrid=window.location.search.substring(1);
 var gridcode=[];
 
-var skipunusedcells=0;
+var gridvalid=1;
+var firstinstance=0;
+var countvalueinsubset=0;
 
-var trialscount=0;
-var totaltrialscount=0;
-
-var stop=0;
-
-var currenttrial = {cell:11, testvalue:0, depth:0};
-var failedtrial = {cell:0, testvalue:0, depth:0};
-
-var pretrialsprogress = [];
-
-var currenttrialvalue=0;
-
-var triedthese = []; for(i=0; i<81; i++){triedthese[i]=0;}
-
-
-var consistent=1;
-var consistencycount=0;
+var badcell = []; for(i=0; i<100; i++){badcell[i]=0;}
 
 document.body.onkeydown = function(e){
 	if(e.keyCode>47 && e.keyCode<58){
@@ -301,14 +297,121 @@ document.body.onkeydown = function(e){
   }
 }
 
+var progressmade=0;
+var lonepossible=0;
+var possiblecount=0;
+var knowncellsbox=0;
+var knowncellspositioninbox=0;
+var alone=0;
+
+var knowncount=0;
+var solved=0;
+var guesses=0;
+var totalguesses=0;
+var guessesperattempt=100;
+var maxguesses=1000;
+var possiblevaluescount=0;
+var lowestpossiblevaluescount=10;
+var randomstart;
+var gridrecord=[100];
+
+function loadgrid(){
+  if(initialgrid.length==81){
+    curentcell=11;
+    for(k=1; k<82; k++){
+      if(initialgrid.charAt(k-1)!=0){fillcell(currentcell, initialgrid.charAt(k-1));}
+      currentcell++;
+      if(currentcell%10==0){currentcell++;}
+    }
+    currentcell=11;
+  }
+}
+
+function fillcell(fillinthiscell, withthisvalue){
+  cellvalue[fillinthiscell]=withthisvalue;
+  if(withthisvalue==""){
+    for(i=1; i<10; i++){possibles[fillinthiscell][i]=1;}
+  }
+  else{
+    for(i=1; i<10; i++){if(i!=withthisvalue){possibles[fillinthiscell][i]=0;}}
+    possibles[fillinthiscell][withthisvalue]=1;
+  }
+  checkvalidgrid();
+}
+
+function checkvalidgrid(){
+  gridvalid=1; // starts out assuming valid
+
+  for(i=0; i<100; i++){badcell[i]=0;} // marks all cells not "bad"
+
+  for(i=1; i<10; i++){ // runs through cell values
+    for(j=1; j<10; j++){ // runs through subset position first coords
+
+//checks columns
+      countvalueinsubset=0;
+      for(var k=1; k<10; k++){
+        if(cellvalue[10*j+k]==i){countvalueinsubset++; if(countvalueinsubset>1){badcell[firstinstance]=1; badcell[10*j+k]=1;} firstinstance=10*j+k;}
+      }
+
+//checks rows
+      countvalueinsubset=0;
+      for(var k=1; k<10; k++){
+        if(cellvalue[j+k*10]==i){countvalueinsubset++; if(countvalueinsubset>1){badcell[firstinstance]=1; badcell[j+k*10]=1;} firstinstance=j+k*10;}
+      }
+
+//checks boxes
+      countvalueinsubset=0;
+      for(var k=1; k<10; k++){
+        if(cellvalue[boxcoords[j][k]]==i){countvalueinsubset++; if(countvalueinsubset>1){badcell[firstinstance]=1; badcell[boxcoords[j][k]]=1;} firstinstance=boxcoords[j][k];}
+      }
+    }
+  }
+
+  for(i=0; i<100; i++){if(badcell[i]==1){gridvalid=0; b=10; a=100;}}
+
+//checks for "dead" cells (ones with no possible values)
+  for(i=11; i<100; i++){
+    if(i%10!=0){
+      possiblecount=0;
+      for(j=1; j<10; j++){
+        if(possibles[i][j]==1){possiblecount++;}
+      }
+      if(possiblecount==0){badcell[i]=1; cellvalue[i]="N"; gridvalid=0; b=10; a=100;}
+    }
+  }
+
+  if(gridvalid==0){document.getElementById("solvebuttontext").innerHTML="<span style=\"font-size:87%; color:#EE0000\";>Bad Input!</span>";}
+  else{document.getElementById("solvebuttontext").innerHTML="Solve";}
+
+  updategridvisual();
+}
+
+function updategridvisual(){
+  for(i=11; i<100; i++){
+    if(i%10!=0){
+      if(!badcell[i]){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}
+      else{document.getElementById(i).innerHTML="<span style=\"color:red;\">"+cellvalue[i]+"</span>";}
+    }
+  }
+  updatebuttontwostatus();
+}
+
+function updatebuttontwostatus(){
+  for(i=0; i<100; i++){if(cellvalue[i]!=""){notempty=1;}}
+  if(notempty){examplemode=0; document.getElementById("buttontwotext").innerHTML="Clear"; notempty=0;}
+  else{examplemode=1; document.getElementById("buttontwotext").innerHTML="Demo";}
+}
+
 function cellclicked(cellcoords){
 
-  closemenu();
+  for(p=11; p<100; p++){fillcell(p,cellvalue[p]);}
 
+  closemenu();
   updategridvisual();
 
   if(cellvalue[cellcoords]==""){document.getElementById(cellcoords).innerHTML="<span style=\"color:black;\">?</span>";}
   else{document.getElementById("M"+cellvalue[cellcoords]).innerHTML="";}
+
   document.getElementById("picknumber").style.visibility="visible";
   document.getElementById("picknumber").style.left=(event.clientX+10)+"px";
   document.getElementById("picknumber").style.top=(event.clientY+10)+"px";
@@ -316,297 +419,173 @@ function cellclicked(cellcoords){
   currentcell=cellcoords;
 }
 
-function numberpicked(pick){
-  if(cellvalue[currentcell]==pick || pick==0){cellvalue[currentcell]="";}
-  else{cellvalue[currentcell]=pick;}
-  clearsolveprogress();
-  updategridvisual();
-//  genereategridcode();
-  updatebuttontwostatus();
-  closemenu();
-}
-
 function closemenu(){
   document.getElementById("picknumber").style.visibility="hidden";
   for(i=1; i<10; i++){document.getElementById("M"+i).innerHTML=i;}
 }
 
-function buttontwo(){
+function numberpicked(pick){
+  if(cellvalue[currentcell]==pick || pick==0){fillcell(currentcell, "");}
+  else{fillcell(currentcell, pick);}
   closemenu();
-  document.getElementById("solvebuttontext").innerHTML="Solve";
-  if(examplemode){example();}
-  else{cleargrid();}
 }
 
-function example(){
-  cellvalue[13]=2;
-  cellvalue[15]=1;
-  cellvalue[17]=7;
-  cellvalue[25]=3;
-  cellvalue[26]=9;
-  cellvalue[27]=5;
-  cellvalue[31]=5;
-  cellvalue[32]=4;
-  cellvalue[39]=6;
-  cellvalue[42]=3;
-  cellvalue[51]=2;
-  cellvalue[52]=7;
-  cellvalue[55]=6;
-  cellvalue[58]=1;
-  cellvalue[59]=3;
-  cellvalue[68]=8;
-  cellvalue[71]=1;
-  cellvalue[78]=9;
-  cellvalue[79]=2;
-  cellvalue[83]=8;
-  cellvalue[84]=9;
-  cellvalue[85]=2;
-  cellvalue[93]=4;
-  cellvalue[95]=5;
-  cellvalue[97]=8;
-  updategridvisual();
-  updatebuttontwostatus();
-}
-
-function cleargrid(){
-  for(i=0; i<100; i++){cellvalue[i]="";}
-  currentcell=11;
-  progressmade=0;
-  lonepossible=0;
-  possiblecount=0;
-  bottomleft=0;
-  skipunusedcells=0;
-  trialscount=0;
-  totaltrialscount=0;
-  stop=0;
-  currenttrial = {cell:11, testvalue:0, depth:0};
-  failedtrial = {cell:0, testvalue:0, depth:0};
-  currenttrialvalue=0;
-  for(i=0; i<81; i++){triedthese[i]=0; pretrialsprogress[i]="";}
-  consistent=1;
-  consistencycount=0;
-  clearsolveprogress();
-  updategridvisual();
-  updatebuttontwostatus();
-}
-
-function clearsolveprogress(){
-  for(i=0; i<100; i++){for(var j=0; j<10; j++){possibles[i][j]=1;}}
-  trialscount=0;
-}
-
-function updategridvisual(){
-  for(i=0; i<100; i++){if(i>9 && i%10!=0){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}}
-}
-
-function updatebuttontwostatus(){
-  for(i=0; i<100; i++){if(cellvalue[i]!=""){notempty=1;}}
-  if(notempty){examplemode=0; document.getElementById("buttontwotext").innerHTML="Clear"; notempty=0;}
-  else{examplemode=1; document.getElementById("buttontwotext").innerHTML="Example";}
+function buttontwo(){
+  if(examplemode){window.location.href = "?"+"500000003080507010009030700010000070007000800040000020001020900050106030300000002";}
+  else{window.location.href = "?"+"";}
 }
 
 function solve(){
-  if(!stop){
-    progressmade=0;
-    removepossiblefromknowns();
-    eliminateinrow();
-    eliminateincolumn();
-    eliminateinbox();
-    aloneincolumn();
-    aloneinrow();
-    aloneinbox();
-    checkforknown();
-    checkgridconsistency();
-    if(!consistent){badtrial();}
-    else{
-      updategridvisual();
-      updatebuttontwostatus();
-      checkifcomplete();
-      if(progressmade){solve();}
-      else{trial();}
-    }
-  }
+  progressmade=0;
+
+  for(a=11; a<100; a++){if(a%10!=0){eliminatefromRCB(a);}}
+
+  checkvalidgrid();
+
+  if(gridvalid){for(a=11; a<100; a++){if(a%10!=0){checkforknown(a);}}}
+  if(gridvalid){for(a=11; a<100; a++){if(a%10!=0){for(b=1; b<10; b++){aloneinRCB(a,b);}}}}
+
+  checkifsolved();
+
+  if(!solved && progressmade==1 && gridvalid){solve();}
+  else if(!solved && progressmade==0 && gridvalid && guesses<guessesperattempt){guessvalue();}
+  else if(!solved && totalguesses<maxguesses){restart();}
 }
 
-function trial(){
-  if(trialscount==0){for(i=11; i<100; i++){pretrialsprogress[i]=cellvalue[i];}}
-  for(i=11; i<100; i++){
-    if(cellvalue[i]=="" && i%10!=0){
-      for(j=1; j<10; j++){
-        if(possibles[i][j]==1 && j>triedthese[trialscount+1]){
-          cellvalue[i]=j;
-          trialscount++;
-          totaltrialscount++;
-          progressmade=1;
-          currenttrialvalue=j;
-          j=10;
-        }
-      }
-      i=100;
-    }
-  }
-  if(progressmade==0){badtrial();}
-  else{solve();}
-}
-
-function badtrial(){
-  triedthese[trialscount]=currenttrialvalue;
-  for(i=trialscount+1; i<81; i++){triedthese[i]=0;}
-  for(i=11; i<100; i++){cellvalue[i]=pretrialsprogress[i];}
-  clearsolveprogress();
-  solve();
-}
-
-function checkifcomplete(){
+function checkifsolved(){
   knowncount=0;
   for(i=11; i<100; i++){
     if(cellvalue[i]!=""){knowncount++;}
   }
-  if(knowncount==81){progressmade=1; stop=1; document.getElementById("solvebuttontext").innerHTML="Done";}
+  if(knowncount==81){solved=1; document.getElementById("solvebuttontext").innerHTML="Solved";}
 }
 
-function removepossiblefromknowns(){
-  for(var i=11; i<100; i++){
-    if(cellvalue[i]!=""){
-      for(var j=1; j<10; j++){
-        if(possibles[i][j]==1  && j!=cellvalue[i]){
-          possibles[i][j]=0; progressmade=1;
-        }
-      }
-    }
+function restart(){
+  for(i=0; i<100; i++){
+    cellvalue[i]=gridrecord[i];
+    if(gridrecord[i]==""){for(j=1; j<10; j++){possibles[i][j]=1;}}
+    else{for(j=1; j<10; j++){possibles[i][j]=0;} possibles[i][gridrecord[i]]=1;}
   }
-}
-
-function checkforknown(){
-  for(var i=11; i<100; i++){
-    if(cellvalue[i]=="" && i%10!=0){
-      lonepossible=0;
-      possiblecount=0;
-      for(var j=1; j<10; j++){
-        if(possibles[i][j]==1){lonepossible=j; possiblecount++;}
-      }
-      if(possiblecount==1){cellvalue[i]=lonepossible; progressmade=1; i=100;}
-    }
-  }
-}
-
-function eliminateinrow(){
-  for(var i=11; i<100; i++){
-    if(cellvalue[i]!=""){
-      for(j=(i%10)+10; j<100; j+=10){
-        if(possibles[j][cellvalue[i]]==1 && j!=i){
-          possibles[j][cellvalue[i]]=0; progressmade=1;
-        }
-      }
-    }
-  }
-}
-
-function eliminateincolumn(){
-  for(var i=11; i<100; i++){
-    if(cellvalue[i]!=""){
-      for(j=10*Math.floor(i/10)+1; j<10*(Math.floor(i/10)+1); j++){
-        if(possibles[j][cellvalue[i]]==1  && j!=i){
-          possibles[j][cellvalue[i]]=0; progressmade=1;
-        }
-      }
-    }
-  }
-}
-
-function eliminateinbox(){
-  for(var i=11; i<100; i++){
-    if(cellvalue[i]!=""){
-      bottomleft=((30*Math.floor((i-10)/30))+10)+((3*Math.floor(((i%10)-1)/3))+1);
-      if(possibles[bottomleft][cellvalue[i]]==1 && bottomleft!=i){possibles[bottomleft][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+1][cellvalue[i]]==1 && bottomleft+1!=i){possibles[bottomleft+1][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+2][cellvalue[i]]==1 && bottomleft+2!=i){possibles[bottomleft+2][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+10][cellvalue[i]]==1 && bottomleft+10!=i){possibles[bottomleft+10][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+11][cellvalue[i]]==1 && bottomleft+11!=i){possibles[bottomleft+11][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+12][cellvalue[i]]==1 && bottomleft+12!=i){possibles[bottomleft+12][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+20][cellvalue[i]]==1 && bottomleft+20!=i){possibles[bottomleft+20][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+21][cellvalue[i]]==1 && bottomleft+21!=i){possibles[bottomleft+21][cellvalue[i]]=0; progressmade=1;}
-      if(possibles[bottomleft+22][cellvalue[i]]==1 && bottomleft+22!=i){possibles[bottomleft+22][cellvalue[i]]=0; progressmade=1;}
-    }
-  }
-}
-
-function aloneincolumn(){
-  for(var i=1; i<10; i++){
-    for(var j=1; j<10; j++){
-      lonepossible=0;
-      possiblecount=0;
-      for(var k=1; k<10; k++){
-        if(possibles[10*j+k][i]==1){lonepossible=10*j+k; possiblecount++;}
-      }
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
-    }
-  }
-}
-
-function aloneinrow(){
-  for(var i=1; i<10; i++){
-    for(var j=1; j<10; j++){
-      lonepossible=0;
-      possiblecount=0;
-      for(var k=1; k<10; k++){
-        if(possibles[j+10*k][i]==1){lonepossible=j+10*k; possiblecount++;}
-      }
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
-    }
-  }
-}
-
-function aloneinbox(){
-  for(var i=1; i<10; i++){
-    for(var j=1; j<10; j++){
-      lonepossible=0;
-      possiblecount=0;
-      bottomleft=(30*Math.floor((j+2)/3))-20 + (3*((j+2)%3))+1;
-      if(possibles[bottomleft][i]==1){lonepossible=bottomleft; possiblecount++;}
-      if(possibles[bottomleft+1][i]==1){lonepossible=bottomleft+1; possiblecount++;}
-      if(possibles[bottomleft+2][i]==1){lonepossible=bottomleft+2; possiblecount++;}
-      if(possibles[bottomleft+10][i]==1){lonepossible=bottomleft+10; possiblecount++;}
-      if(possibles[bottomleft+11][i]==1){lonepossible=bottomleft+11; possiblecount++;}
-      if(possibles[bottomleft+12][i]==1){lonepossible=bottomleft+12; possiblecount++;}
-      if(possibles[bottomleft+20][i]==1){lonepossible=bottomleft+20; possiblecount++;}
-      if(possibles[bottomleft+21][i]==1){lonepossible=bottomleft+21; possiblecount++;}
-      if(possibles[bottomleft+22][i]==1){lonepossible=bottomleft+22; possiblecount++;}
-      if(possiblecount==1 && cellvalue[lonepossible]!=i){cellvalue[lonepossible]=i; progressmade=1; j=10; i=10;}
-    }
-  }
-}
-
-function checkgridconsistency(){
-  for(i=1; i<10; i++){
-    for(j=1; j<10; j++){
-      consistencycount=0;
-      for(k=1; k<10; k++){
-        if(cellvalue[10*j+k]==i){consistencycount++;}
-      }
-      if(consistencycount>1){consistent=0;}
-      consistencycount=0;
-      for(k=1; k<10; k++){
-        if(cellvalue[j+k*10]==i){consistencycount++;}
-      }
-      if(consistencycount>1){consistent=0;}
-    }
-  }
-}
-
-function loadgrid(){
-  if(initialgrid.length==81){
-    for(k=1; k<82; k++){
-      if(initialgrid.charAt(k-1)!=0){cellvalue[currentcell]=(initialgrid.charAt(k-1));}
-      currentcell++;
-      if(currentcell%10==0){currentcell++;}
-    }
-    updategridvisual();
-  }
+  guesses=0;
+  gridvalid=1;
   currentcell=11;
+  solve();
 }
 
-function genereategridcode(){
+function guessvalue(){
+  if(guesses==0){for(i=0; i<100; i++){gridrecord[i]=cellvalue[i];}} // records grid before going into guessing
+
+  guesses++;
+  totalguesses++;
+  lowestpossiblevaluescount=10;
+  document.getElementById("solvebuttontext").innerHTML="<span style=\"font-size:85%\">Guesses: "+guesses+"</span>";
+  for(i=11; i<100; i++){
+    possiblevaluescount=0;
+    for(j=1; j<10; j++){
+      if(possibles[i][j]==1){possiblevaluescount++;}
+    }
+    if(possiblevaluescount==2){lowestpossiblevaluescount=2; i=100;}
+    else if(possiblevaluescount<lowestpossiblevaluescount && possiblevaluescount>2){lowestpossiblevaluescount=possiblevaluescount;}
+  }
+  for(i=11; i<100; i++){if(i%10!=0){
+    possiblevaluescount=0;
+    for(j=1; j<10; j++){
+      if(possibles[i][j]==1){possiblevaluescount++;}
+    }
+    if(possiblevaluescount==lowestpossiblevaluescount){
+      randomstart=Math.floor(9*Math.random())+1;
+      while(cellvalue[i]==""){
+        if(possibles[i][randomstart]==1){cellvalue[i]=randomstart; for(j=1; j<10; j++){if(j!=randomstart){possibles[i][j]=0;}}}
+        else{randomstart=(randomstart%9)+1;}
+      }
+      i=100;
+    }
+  }}
+  solve();
+}
+
+function eliminatefromRCB(knowncell){ // eliminates the value of a known cell from all other cells sharing a row, column, and box with it
+  if(cellvalue[knowncell]!=""){
+    for(j=1; j<10; j++){
+
+      if(knowncell%10!=j){
+        if(possibles[10*Math.floor(knowncell/10)+j][cellvalue[knowncell]]==1){ // eliminates in column
+          possibles[10*Math.floor(knowncell/10)+j][cellvalue[knowncell]]=0;
+          progressmade=1;
+        }
+      }
+
+      if(Math.floor(knowncell/10)!=j){
+        if(possibles[(knowncell%10)+(10*j)][cellvalue[knowncell]]==1){ // eliminates in row
+          possibles[(knowncell%10)+(10*j)][cellvalue[knowncell]]=0;
+          progressmade=1;
+        }
+      }
+
+      for(var k=1; k<10; k++){
+        for(var l=1; l<10; l++){
+          if(boxcoords[k][l]==knowncell){knowncellsbox=k; knowncellspositioninbox=l;} // finds box and position in box of known cell
+        }
+      }
+
+      if(knowncellspositioninbox!=j){
+        if(possibles[boxcoords[knowncellsbox][j]][cellvalue[knowncell]]==1){ // eliminates in box
+          possibles[boxcoords[knowncellsbox][j]][cellvalue[knowncell]]=0;
+          progressmade=1;
+        }
+      }
+    }
+  }
+}
+
+function checkforknown(checkedcell){
+  if(cellvalue[checkedcell]==""){
+    lonepossible=0;
+    possiblecount=0;
+    for(var j=1; j<10; j++){if(possibles[checkedcell][j]==1){lonepossible=j; possiblecount++;}}
+    if(possiblecount==1){fillcell(checkedcell,lonepossible); progressmade=1;}
+  }
+}
+
+function aloneinRCB(mightbealonecell, mightbealonevalue){
+  if(cellvalue[mightbealonecell]==""){
+    alone=1;
+    for(j=1; j<10; j++){
+      if(mightbealonecell%10!=j && possibles[10*Math.floor(mightbealonecell/10)+j][mightbealonevalue]==1){
+        alone=0;
+        j=10;
+      }
+    }
+    if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+    else{
+      alone=1;
+      for(j=1; j<10; j++){
+        if(Math.floor(mightbealonecell/10)!=j && possibles[(mightbealonecell%10)+(10*j)][mightbealonevalue]==1){
+          alone=0;
+          j=10;
+        }
+      }
+      if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+      else{
+        for(var k=1; k<10; k++){
+          for(var l=1; l<10; l++){
+            if(boxcoords[k][l]==mightbealonecell){knowncellsbox=k; knowncellspositioninbox=l;} // finds box and position in box of might be alone cell - note: code reused from before so used same "known cell" variable names
+          }
+        }
+        alone=1;
+        for(j=1; j<10; j++){
+          if(knowncellspositioninbox!=j && possibles[boxcoords[knowncellsbox][j]][mightbealonevalue]==1){
+            alone=0;
+            j=10;
+          }
+        }
+        if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+      }
+    }
+  }
+}
+
+/* function genereategridcode(){
   skipunusedcells=11;
   for(i=0; i<81; i++){
     if(skipunusedcells%10==0){skipunusedcells++;}
@@ -615,6 +594,6 @@ function genereategridcode(){
     skipunusedcells++;
   }
   window.location.href = "?"+gridcode.join("");
-}
+} */
 
 </script>
