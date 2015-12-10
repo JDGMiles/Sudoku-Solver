@@ -4,8 +4,8 @@
 \paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh9220\viewkind0
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
 
-\f0\fs24 \cf0 1. When resetting the solving progress at the beginning of cellclicked() the fillcell loop should do what the previous line does, if you read the fillcell code, but somehow it doesn't work line that and I need the previous line too :-o\
+\f0\fs24 \cf0 1. When resetting the solving progress at the beginning of cellclicked() the fillcell loop should do what the previous line does, if you read the fillcell code, but somehow it doesn't work like that and I need the previous line too :-o\
 \
-Solved it - stupid same variable names in nested loop thing URGH easy fix\
+Solved it - it was that "same variable name in nested loop" thing oops. Easy fix.\
 \
-2. For some reason, not using the "not for a%10=0" code to cut out the invisible cells really screws up aloneinbox(). But that's not surprising since we really DON'T want to actually be processing those ones.}
+2. For some reason, not using the "not for a%10==0" code to cut out the invisible cells really screws up aloneinbox(). But that's not surprising since we really don't want to actually be processing those ones anyway. What is /probably/ happening if you don't have that exclusion is that the cells divisible by ten are being processed and removing possibilities from the relevant ones, or else having their own possibilities removed and then counting for something later on where it is assumed the invisible cells are all possibility 111111111.}
