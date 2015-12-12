@@ -287,6 +287,7 @@ var firstinstance=0;
 var countvalueinsubset=0;
 
 var badcell = []; for(i=0; i<100; i++){badcell[i]=0;}
+var deducedcell = []; for(i=0; i<100; i++){badcell[i]=0;}
 
 document.body.onkeydown = function(e){
 	if(e.keyCode>47 && e.keyCode<58){
@@ -391,8 +392,9 @@ function checkvalidgrid(){
 function updategridvisual(){
   for(i=11; i<100; i++){
     if(i%10!=0){
-      if(!badcell[i]){document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}
-      else{document.getElementById(i).innerHTML="<span style=\"color:red;\">"+cellvalue[i]+"</span>";}
+      if(badcell[i]){document.getElementById(i).innerHTML="<span style=\"color:red;\">"+cellvalue[i]+"</span>";}
+      else if(deducedcell[i]){document.getElementById(i).innerHTML="<span style=\"color:#0000DD;\">"+cellvalue[i]+"</span>";}
+      else{document.getElementById(i).innerHTML="<span style=\"color:black;\">"+cellvalue[i]+"</span>";}
     }
   }
   updatebuttontwostatus();
@@ -437,7 +439,7 @@ function buttontwo(){
   else{window.location.href = "?"+"";}
 }
 
-function solve(){
+function solve(){if(gridvalid){
   progressmade=0;
 
   for(a=11; a<100; a++){if(a%10!=0){eliminatefromRCB(a);}}
@@ -452,7 +454,7 @@ function solve(){
   if(!solved && progressmade==1 && gridvalid){solve();}
   else if(!solved && progressmade==0 && gridvalid && guesses<guessesperattempt){guessvalue();}
   else if(!solved && totalguesses<maxguesses){restart();}
-}
+}}
 
 function checkifsolved(){
   knowncount=0;
@@ -464,6 +466,7 @@ function checkifsolved(){
 
 function restart(){
   for(i=0; i<100; i++){
+    deducedcell[i]=0;
     cellvalue[i]=gridrecord[i];
     if(gridrecord[i]==""){for(j=1; j<10; j++){possibles[i][j]=1;}}
     else{for(j=1; j<10; j++){possibles[i][j]=0;} possibles[i][gridrecord[i]]=1;}
@@ -500,7 +503,7 @@ function guessvalue(){
       if(possiblevaluescount==lowestpossiblevaluescount){
         randomstart=Math.floor(9*Math.random())+1;
         while(cellvalue[modified]==""){
-          if(possibles[modified][randomstart]==1){cellvalue[modified]=randomstart; for(j=1; j<10; j++){if(j!=randomstart){possibles[modified][j]=0;}}}
+          if(possibles[modified][randomstart]==1){deducedcell[i]=1; cellvalue[modified]=randomstart; for(j=1; j<10; j++){if(j!=randomstart){possibles[modified][j]=0;}}}
           else{randomstart=(randomstart%9)+1;}
         }
         i=100;
@@ -549,7 +552,7 @@ function checkforknown(checkedcell){
     lonepossible=0;
     possiblecount=0;
     for(var j=1; j<10; j++){if(possibles[checkedcell][j]==1){lonepossible=j; possiblecount++;}}
-    if(possiblecount==1){fillcell(checkedcell,lonepossible); progressmade=1;}
+    if(possiblecount==1){deducedcell[checkedcell]=1; fillcell(checkedcell,lonepossible); progressmade=1;}
   }
 }
 
@@ -562,7 +565,7 @@ function aloneinRCB(mightbealonecell, mightbealonevalue){
         j=10;
       }
     }
-    if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+    if(alone==1){deducedcell[mightbealonecell]=1; fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
     else{
       alone=1;
       for(j=1; j<10; j++){
@@ -571,7 +574,7 @@ function aloneinRCB(mightbealonecell, mightbealonevalue){
           j=10;
         }
       }
-      if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+      if(alone==1){deducedcell[mightbealonecell]=1; fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
       else{
         for(var k=1; k<10; k++){
           for(var l=1; l<10; l++){
@@ -585,7 +588,7 @@ function aloneinRCB(mightbealonecell, mightbealonevalue){
             j=10;
           }
         }
-        if(alone==1){fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
+        if(alone==1){deducedcell[mightbealonecell]=1; fillcell(mightbealonecell,mightbealonevalue); progressmade=1;}
       }
     }
   }
